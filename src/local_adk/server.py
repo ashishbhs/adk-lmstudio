@@ -305,7 +305,10 @@ async def research_stream(req: ResearchRequest):
                         if part.text:
                             if current_stage:
                                 stage_outputs[current_stage] = stage_outputs.get(current_stage, '') + part.text
-                            final_text += part.text  # last stage = synthesizer report
+                                if current_stage == "SynthesizerAgent":
+                                    final_text += part.text
+                            else:
+                                final_text += part.text
 
             # Emit final stage complete
             if current_stage:
@@ -314,6 +317,12 @@ async def research_stream(req: ResearchRequest):
             if not final_text:
                 yield f"data: {json.dumps({'type': 'error', 'text': 'No research output was produced.'})}\n\n"
                 return
+
+            # Clean up reasoning blocks from local models (e.g., DeepSeek-R1 <think> tags)
+            import re
+            final_text = re.sub(r'<think>[\s\S]*?</think>\n*', '', final_text, flags=re.IGNORECASE)
+            final_text = re.sub(r'\(Thinking Process:[\s\S]*?\)\n*', '', final_text, flags=re.IGNORECASE)
+            final_text = final_text.strip()
 
             # Stream the synthesizer report word-by-word
             yield f"data: {json.dumps({'type': 'report_start'})}\n\n"

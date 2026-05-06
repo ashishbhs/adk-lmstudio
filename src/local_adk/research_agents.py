@@ -44,7 +44,7 @@ When given a user's research topic or question, you must:
 ```
 
 Be specific. Use advanced search syntax (quotes, site:, filetype:) when helpful.
-Do NOT explain your reasoning — output ONLY the JSON.
+Do NOT explain your reasoning. Do NOT output a "Thinking Process". Output ONLY the raw JSON block and nothing else.
 """.strip()
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -123,6 +123,7 @@ Rules:
 - Use tables, bullet points, and headers to improve readability.
 - Be comprehensive — this is a deep research report, not a summary.
 - Minimum length: 800 words.
+- Do NOT include any internal "Thinking Process" or `<think>` tags in your final output. Start directly with the report.
 """.strip()
 
 
