@@ -30,35 +30,40 @@ _DDG_URL = "https://lite.duckduckgo.com/lite/"
 def _parse_results_raw(html: str, max_results: int = 8) -> list[dict]:
     """
     Parses raw HTML from DDG Lite search and extracts title/url/snippet triples.
+    Uses BeautifulSoup for robust parsing against DOM structure changes.
     """
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html, 'html.parser')
     results = []
 
-    # DDG Lite uses tables: 
-    # Title/URL row has class "result-snippet" inside an a tag
-    # Snippet row has class "result-snippet"
-    
-    # 1. Find all title links:
-    title_pattern = re.compile(r'<a class="result-snippet"[^>]*href="([^"]+)"[^>]*>(.*?)</a>', re.DOTALL)
-    # 2. Find all snippet texts:
-    snippet_pattern = re.compile(r'<td class="result-snippet"[^>]*>(.*?)</td>', re.DOTALL)
-
-    titles_urls = title_pattern.findall(html)
-    snippets = snippet_pattern.findall(html)
-
-    for i, (url, title_html) in enumerate(titles_urls):
-        if i >= max_results:
-            break
+    # Find all anchor tags that look like search results
+    for a_tag in soup.find_all('a', href=True):
+        url = a_tag['href']
         
-        # Clean title
-        title = re.sub(r'<[^>]+>', '', title_html).strip()
-        
-        # Clean snippet if available
+        # Skip internal DDG links, ads, or navigational links
+        if not url.startswith('http') or 'duckduckgo.com' in url:
+            continue
+            
+        title = a_tag.get_text(separator=" ", strip=True)
+        if not title:
+            continue
+            
+        # DDG Lite typical layout: the snippet is often in the next table row
         snippet = ""
-        if i < len(snippets):
-            snippet = re.sub(r'<[^>]+>', ' ', snippets[i])
-            snippet = re.sub(r'\s+', ' ', snippet).strip()
+        parent_tr = a_tag.find_parent('tr')
+        if parent_tr:
+            next_tr = parent_tr.find_next_sibling('tr')
+            if next_tr:
+                snippet_td = next_tr.find('td', class_='result-snippet')
+                if snippet_td:
+                    snippet = snippet_td.get_text(separator=" ", strip=True)
         
-        results.append({"title": title, "url": url, "snippet": snippet})
+        # Deduplicate identical URLs
+        if not any(r['url'] == url for r in results):
+            results.append({"title": title, "url": url, "snippet": snippet})
+            
+        if len(results) >= max_results:
+            break
 
     return results
 
