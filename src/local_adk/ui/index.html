@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Local ADK — Multi-Agent Studio</title>
+<meta name="description" content="Local ADK Multi-Agent Studio — run deep research pipelines locally with LM Studio and Google ADK."/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="/static/style.css"/>
+</head>
+<body>
+<!-- Animated background -->
+<canvas id="bgCanvas"></canvas>
+
+<!-- ===== APP SHELL ===== -->
+<div id="app">
+
+  <!-- TOP BAR -->
+  <header id="topbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <span class="brand-name">Local ADK</span>
+      <span class="brand-tag">Multi-Agent Studio</span>
+    </div>
+
+    <nav class="top-tabs">
+      <button class="tab active" data-tab="chat" id="tab-chat">Chat</button>
+      <button class="tab" data-tab="research" id="tab-research">&#x1F50D; Deep Research</button>
+      <button class="tab" data-tab="orchestrate" id="tab-orchestrate">Orchestrate</button>
+      <button class="tab" data-tab="settings" id="tab-settings">Settings</button>
+    </nav>
+
+    <div class="status-bar">
+      <div class="status-pill" id="lmStatus">
+        <span class="dot"></span>
+        <span class="label">Checking&#x2026;</span>
+      </div>
+      <div class="model-badge" id="modelBadge">&#x2014;</div>
+    </div>
+  </header>
+
+  <!-- ===== CHAT TAB ===== -->
+  <section id="view-chat" class="view active">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div class="sidebar-heading">Agents</div>
+      <div id="agentList"></div>
+
+      <div class="sidebar-heading" style="margin-top:1.5rem">Session</div>
+      <div class="session-info">
+        <div class="si-row"><span>Session</span><code id="siSession">&#x2014;</code></div>
+        <div class="si-row"><span>Messages</span><span id="siMsgs">0</span></div>
+        <div class="si-row"><span>Tokens (est.)</span><span id="siTokens">0</span></div>
+      </div>
+      <button class="btn-ghost" id="btnNewSession">+ New Session</button>
+    </aside>
+
+    <!-- Chat main -->
+    <main id="chatMain">
+      <div id="chatHeader">
+        <div id="activeAgentBadge">
+          <span class="agent-dot" id="agentDot"></span>
+          <span id="agentName">&#x2014;</span>
+          <span id="agentRole" class="role-tag">&#x2014;</span>
+        </div>
+      </div>
+
+      <div id="messages"></div>
+
+      <div id="inputArea">
+        <div id="inputBox">
+          <textarea id="userInput" rows="1" placeholder="Ask anything&#x2026;"></textarea>
+          <button id="sendBtn" title="Send (Enter)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+        <div id="inputHint">Press <kbd>Enter</kbd> to send &middot; <kbd>Shift+Enter</kbd> for new line</div>
+      </div>
+    </main>
+  </section>
+
+  <!-- ===== DEEP RESEARCH TAB ===== -->
+  <section id="view-research" class="view">
+    <div class="research-layout">
+
+      <!-- LEFT: Input + Pipeline Visualiser -->
+      <div class="research-left">
+        <div class="research-hero">
+          <h2>&#x1F50D; Deep Research</h2>
+          <p>3-agent pipeline: <span class="pill-planner">Planner</span> &#x2192; <span class="pill-executor">Executor</span> &#x2192; <span class="pill-synth">Synthesizer</span></p>
+        </div>
+
+        <!-- Query input -->
+        <div class="research-input-wrap">
+          <textarea id="researchInput" rows="3" placeholder="Enter a research topic or question&#x2026;  e.g. 'What is the current state of quantum computing in 2025?'"></textarea>
+          <button id="researchBtn" class="btn-research">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            Research
+          </button>
+        </div>
+
+        <!-- Pipeline stages visualiser -->
+        <div class="pipeline-viz" id="pipelineViz">
+          <div class="pipeline-stage" id="stage-PlannerAgent" data-stage="PlannerAgent">
+            <div class="stage-icon" style="background:#6366f122;color:#6366f1">P</div>
+            <div class="stage-info">
+              <strong>PlannerAgent</strong>
+              <small>Decomposes query into search strategies</small>
+            </div>
+            <div class="stage-status" id="status-PlannerAgent">idle</div>
+          </div>
+          <div class="pipeline-arrow">&#x2192;</div>
+          <div class="pipeline-stage" id="stage-ExecutorAgent" data-stage="ExecutorAgent">
+            <div class="stage-icon" style="background:#22c55e22;color:#22c55e">E</div>
+            <div class="stage-info">
+              <strong>ExecutorAgent</strong>
+              <small>Searches Google &amp; fetches pages</small>
+            </div>
+            <div class="stage-status" id="status-ExecutorAgent">idle</div>
+          </div>
+          <div class="pipeline-arrow">&#x2192;</div>
+          <div class="pipeline-stage" id="stage-SynthesizerAgent" data-stage="SynthesizerAgent">
+            <div class="stage-icon" style="background:#f59e0b22;color:#f59e0b">S</div>
+            <div class="stage-info">
+              <strong>SynthesizerAgent</strong>
+              <small>Synthesises comprehensive report</small>
+            </div>
+            <div class="stage-status" id="status-SynthesizerAgent">idle</div>
+          </div>
+        </div>
+
+        <!-- Live activity log -->
+        <div class="activity-log-wrap">
+          <div class="activity-log-header">Live Activity</div>
+          <div class="activity-log" id="activityLog">
+            <div class="log-idle">Run a research query to see live pipeline activity&#x2026;</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Report output -->
+      <div class="research-right">
+        <div class="report-header">
+          <span class="report-title">Research Report</span>
+          <button class="btn-ghost" id="btnCopyReport" style="display:none">Copy</button>
+          <button class="btn-ghost" id="btnClearReport" style="display:none">Clear</button>
+        </div>
+        <div class="report-output" id="reportOutput">
+          <div class="report-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" width="48" height="48">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            <p>Your deep research report will appear here.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===== ORCHESTRATE TAB ===== -->
+  <section id="view-orchestrate" class="view">
+    <div class="orch-hero">
+      <h2>Agent Orchestration</h2>
+      <p>Chain agents together to tackle complex, multi-step tasks.</p>
+    </div>
+    <div id="orchCanvas">
+      <!-- nodes rendered by JS -->
+    </div>
+    <div class="orch-hint">Multi-agent pipelines coming soon &#x2014; agents are ready to be wired.</div>
+  </section>
+
+  <!-- ===== SETTINGS TAB ===== -->
+  <section id="view-settings" class="view">
+    <div class="settings-panel">
+      <h2>Configuration</h2>
+      <div class="setting-group">
+        <label>LM Studio Base URL</label>
+        <div id="cfgBaseUrl" class="cfg-val">&#x2014;</div>
+      </div>
+      <div class="setting-group">
+        <label>Active Model</label>
+        <div id="cfgModel" class="cfg-val">&#x2014;</div>
+      </div>
+      <div class="setting-group">
+        <label>API Key</label>
+        <div class="cfg-val">lm-studio (local)</div>
+      </div>
+      <div class="setting-group">
+        <label>Session Type</label>
+        <div class="cfg-val">InMemory (single-process)</div>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /#app -->
+
+<script src="/static/app.js"></script>
+</body>
+</html>
