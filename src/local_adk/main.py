@@ -64,6 +64,18 @@ async def run_query(query: str) -> None:
         sys.exit(1)
 
 
+def main():
+    """Entry point for the local-adk CLI."""
+    import uvicorn
+    import sys
+    
+    if len(sys.argv) > 1 and sys.argv[1] == "cli":
+        prompt = " ".join(sys.argv[2:]) or "Explain the mechanics of a vector database index."
+        asyncio.run(run_query(prompt))
+    else:
+        logger.info("Starting Local ADK server via Uvicorn...")
+        uvicorn.run("local_adk.server:app", host="0.0.0.0", port=8000, reload=True)
+
+
 if __name__ == "__main__":
-    prompt = "Explain the mechanics of a vector database index."
-    asyncio.run(run_query(prompt))
+    main()
